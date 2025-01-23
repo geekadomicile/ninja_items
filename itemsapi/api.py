@@ -28,7 +28,7 @@ class EmailSchema(Schema):
 
 class ComponentHistorySchema(Schema):
     id: int
-    item: int
+    item: int | None
     old_parent: int | None
     new_parent: int | None
     changed_at: Any
