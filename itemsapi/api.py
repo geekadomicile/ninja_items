@@ -26,6 +26,25 @@ class EmailSchema(Schema):
     content: str
     created_at: Any
 
+class ComponentHistorySchema(Schema):
+    id: int
+    item: int
+    old_parent: int | None
+    new_parent: int | None
+    changed_at: Any
+
+    @staticmethod
+    def resolve_item(obj):
+        return obj.item.id if obj.item else None
+
+    @staticmethod
+    def resolve_old_parent(obj):
+        return obj.old_parent.id if obj.old_parent else None
+
+    @staticmethod
+    def resolve_new_parent(obj):
+        return obj.new_parent.id if obj.new_parent else None
+
 # Input schemas
 class ItemIn(Schema):
     name: str
@@ -50,35 +69,55 @@ class ItemOut(Schema):
     notes: List[NoteSchema] = []
     attachments: List[AttachmentSchema] = []
     emails: List[EmailSchema] = []
+    
+    @staticmethod
+    def resolve_children(obj):
+        if getattr(obj, '_flat_view', False):
+            return []
+            
+        if not hasattr(obj, 'children') or obj.id in getattr(obj, '_processed_ids', set()):
+            return []
+        obj._processed_ids = getattr(obj, '_processed_ids', set()) | {obj.id}
+        return obj.children.all()
+    
+    @staticmethod
+    def resolve_notes(obj):
+        return obj.notes.all() if hasattr(obj, 'notes') else []
+        
+    @staticmethod
+    def resolve_attachments(obj):
+        return obj.attachments.all() if hasattr(obj, 'attachments') else []
+        
+    @staticmethod
+    def resolve_emails(obj):
+        return obj.emails.all() if hasattr(obj, 'emails') else []
 
 # Item endpoints
 @router.get('/items', response=List[ItemOut])
-def list_items(request):
-    """List all root items with their complete hierarchies"""
-    return Item.objects.filter(parent__isnull=True).prefetch_related(
-        'children',
-        'children__children',
-        'children__notes',
-        'children__attachments',
-        'children__emails',
-        'notes',
-        'attachments',
-        'emails'
-    )
+def list_items(request, hierarchical: bool = True):
+    queryset = Item.objects.select_related('parent')
+    
+    if hierarchical:
+        queryset = queryset.filter(parent__isnull=True)
+        return queryset.prefetch_related(
+            'children',
+            'notes',
+            'attachments',
+            'emails'
+        )
+    else:
+        items = queryset.prefetch_related(
+            'notes',
+            'attachments',
+            'emails'
+        )
+        for item in items:
+            item._flat_view = True
+        return items
 
-@router.get('/items/tree', response=List[ItemOut])
-def list_items_tree(request):
-    # Get root items (null parent) with all relationships
-    return Item.objects.filter(parent__isnull=True).prefetch_related(
-        'children', 
-        'children__children',  # Grandchildren
-        'children__notes',     # Children's notes
-        'children__attachments', # Children's attachments
-        'children__emails',    # Children's emails
-        'notes', 
-        'attachments', 
-        'emails'
-    )
+@router.get('/items/history', response=List[ComponentHistorySchema])
+def get_component_history(request):
+    return ComponentHistory.objects.all().order_by('-changed_at')
 
 @router.post('/items', response=ItemOut)
 def create_item(request, data: ItemIn):
@@ -94,14 +133,7 @@ def create_item(request, data: ItemIn):
 def get_item(request, item_id: int):
     """Get item with complete component hierarchy"""
     item = Item.objects.filter(id=item_id).prefetch_related(
-        'children',
-        'children__children',
-        'children__notes',
-        'children__attachments',
-        'children__emails',
-        'notes',
-        'attachments',
-        'emails'
+        *Item.get_prefetch_fields()
     ).first()
     if not item:
         raise HttpError(404, "Item not found")
@@ -128,6 +160,25 @@ def partial_update_item(request, item_id: int, data: ItemIn):
         return item
     except Item.DoesNotExist:
         raise HttpError(404, "Item not found")
+    
+@router.get('/items/search', response=List[ItemOut])
+def search_items(request, qr_code: str = None, name: str = None, description: str = None):
+    """
+    Search items by various fields
+    Returns flat list of matching items with their relationships
+    """
+    queryset = Item.objects
+    
+    if qr_code:
+        queryset = queryset.filter(qr_code=qr_code)
+    if name:
+        queryset = queryset.filter(name__icontains=name)
+    if description:
+        queryset = queryset.filter(description__icontains=description)
+        
+    return queryset.prefetch_related(
+        *Item.get_prefetch_fields()
+    )
 
 @router.put('/items/{item_id}/parent', response=ItemOut)
 def change_parent(request, item_id: int, new_parent_id: int | None = None):
@@ -156,6 +207,7 @@ def change_parent(request, item_id: int, new_parent_id: int | None = None):
         raise HttpError(404, "Item not found")
     except ValidationError as e:
         raise HttpError(400, str(e))
+
 
 @router.delete('/items/{item_id}')
 def delete_item(request, item_id: int):
