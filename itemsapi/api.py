@@ -32,19 +32,26 @@ class ComponentHistorySchema(Schema):
     old_parent: int | None
     new_parent: int | None
     changed_at: Any
+    item_name: str | None  # Add this to store item name
+    old_parent_name: str | None  # Add this to store old parent name
+    new_parent_name: str | None  # Add this to store new parent name
 
     @staticmethod
     def resolve_item(obj):
         return obj.item.id if obj.item else None
 
     @staticmethod
-    def resolve_old_parent(obj):
-        return obj.old_parent.id if obj.old_parent else None
+    def resolve_item_name(obj):
+        return obj.item.name if obj.item else "Deleted Item"
 
     @staticmethod
-    def resolve_new_parent(obj):
-        return obj.new_parent.id if obj.new_parent else None
+    def resolve_old_parent_name(obj):
+        return obj.old_parent.name if obj.old_parent else "Storage"
 
+    @staticmethod
+    def resolve_new_parent_name(obj):
+        return obj.new_parent.name if obj.new_parent else "Storage"
+    
 # Input schemas
 class ItemIn(Schema):
     name: str
