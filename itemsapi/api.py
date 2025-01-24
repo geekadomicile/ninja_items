@@ -79,13 +79,12 @@ class ItemOut(Schema):
     
     @staticmethod
     def resolve_children(obj):
-        if getattr(obj, '_flat_view', False):
+        if not hasattr(obj, '_processed_ids'):
+            obj._processed_ids = set()
+        if obj.id in obj._processed_ids:
             return []
-            
-        if not hasattr(obj, 'children') or obj.id in getattr(obj, '_processed_ids', set()):
-            return []
-        obj._processed_ids = getattr(obj, '_processed_ids', set()) | {obj.id}
-        return obj.children.all()
+        obj._processed_ids.add(obj.id)
+        return getattr(obj, 'children', [])
     
     @staticmethod
     def resolve_notes(obj):
@@ -138,8 +137,7 @@ def create_item(request, data: ItemIn):
 
 @router.get('/items/{item_id}', response=ItemOut)
 def get_item(request, item_id: int):
-    """Get item with complete component hierarchy"""
-    item = Item.objects.filter(id=item_id).prefetch_related(
+    item = Item.objects.filter(id=item_id).select_related('parent').prefetch_related(
         *Item.get_prefetch_fields()
     ).first()
     if not item:
