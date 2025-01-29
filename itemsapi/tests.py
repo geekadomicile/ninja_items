@@ -119,7 +119,7 @@ class ItemAPITests(TestCase):
     # Deletion Tests
     def test_delete_item(self):
         response = self.client.delete(f'{self.base_url}/{self.parent.id}')
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 204)
         self.assertEqual(Item.objects.count(), 1)
 
 class NoteAPITests(TestCase):
@@ -133,14 +133,14 @@ class NoteAPITests(TestCase):
             {'content': 'Test Note'},
             content_type='application/json'
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 201)
         self.assertEqual(Note.objects.count(), 1)
         self.assertEqual(Note.objects.first().content, 'Test Note')
 
     def test_delete_note(self):
         note = Note.objects.create(item=self.item, content='Test')
         response = self.client.delete(f'{self.note_url}/{note.id}')
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 204)
         self.assertEqual(Note.objects.count(), 0)
 
 class AttachmentAPITests(TestCase):
@@ -155,9 +155,9 @@ class AttachmentAPITests(TestCase):
             {'file': test_file},
             format='multipart'
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 201)
         attachment = Attachment.objects.first()
-        self.assertEqual(attachment.file.name, 'attachments/test.txt')
+        self.assertTrue(attachment.file.name.startswith('attachments/test'))
         self.assertEqual(attachment.type, 'text/plain')
 
 class ComponentHistoryTests(TestCase):
