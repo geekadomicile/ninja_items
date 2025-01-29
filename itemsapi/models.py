@@ -6,7 +6,7 @@ class Item(models.Model):
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='children')
     name = models.CharField(max_length=255)
     qr_code = models.CharField(max_length=255, blank=True)
-    description = models.TextField(blank=True)
+    description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def clean(self):
@@ -16,6 +16,7 @@ class Item(models.Model):
                 if current == self:
                     raise ValidationError("Circular dependency detected")
                 current = current.parent
+    
     @classmethod
     def get_prefetch_fields(cls):
         return [
