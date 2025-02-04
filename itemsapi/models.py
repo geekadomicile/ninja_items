@@ -1,21 +1,20 @@
 # models.py
 from django.db import models
 from django.core.exceptions import ValidationError
+from mptt.models import MPTTModel, TreeForeignKey
 
-class Item(models.Model):
-    parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='children')
+class Item(MPTTModel):
+    parent = TreeForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='children')
     name = models.CharField(max_length=255)
     qr_code = models.CharField(max_length=255, blank=True)
     description = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def clean(self):
-        if self.parent:
-            current = self.parent
-            while current:
-                if current == self:
-                    raise ValidationError("Circular dependency detected")
-                current = current.parent
+    class MPTTMeta:
+        order_insertion_by = ['name']
+  
+    def get_full_path(self):
+        return '/'.join([ancestor.name for ancestor in self.get_ancestors(include_self=True)])
     
     @classmethod
     def get_prefetch_fields(cls):

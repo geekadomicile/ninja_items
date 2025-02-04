@@ -94,6 +94,8 @@ class ItemOut(Schema):
     description: str | None
     created_at: Any
     parent_id: int | None
+    level: int  # Add MPTT level field
+    tree_id: int  # Add tree identifier
     children: List["ItemOut"] = []
     notes: List[NoteSchema] = []
     attachments: List[AttachmentSchema] = []
@@ -101,12 +103,12 @@ class ItemOut(Schema):
     
     @staticmethod
     def resolve_children(obj):
-        if not hasattr(obj, '_processed_ids'):
-            obj._processed_ids = set()
-        if obj.id in obj._processed_ids:
-            return []
-        obj._processed_ids.add(obj.id)
-        return getattr(obj, 'children', [])
+        # MPTT provides optimized tree traversal
+        return obj.get_children().prefetch_related(
+            'notes',
+            'attachments',
+            'emails'
+        )
     
     @staticmethod
     def resolve_notes(obj):
@@ -123,14 +125,10 @@ class ItemOut(Schema):
 # Item endpoints
 @router.get('/items', response={200: List[ItemOut], 500: ErrorResponse})
 def list_items(request, hierarchical: bool = True):
-    """
-    List items either in hierarchical (tree) or flat structure
-    """
     try:
         queryset = Item.objects.select_related('parent')
         
         if hierarchical:
-            # Return only root items with their full tree
             items = queryset.filter(parent__isnull=True).prefetch_related(
                 'children',
                 'notes',
@@ -138,16 +136,15 @@ def list_items(request, hierarchical: bool = True):
                 'emails'
             )
         else:
-            # Return all items in a flat list
+            # For flat view, don't prefetch children
             items = queryset.all().prefetch_related(
                 'notes',
                 'attachments',
                 'emails'
             )
-            # Prevent children from being included in flat view
-            #for item in items:
-            #    setattr(item, '_flat_view', True)
-            #    setattr(item, 'children', [])
+            # Explicitly set children to empty list for flat view
+            for item in items:
+                item._prefetched_objects_cache = {'children': []}
         
         return items
     except Exception as e:
@@ -260,42 +257,32 @@ def change_parent(request, item_id: int, new_parent_id: int | None = None):
             item = Item.objects.get(id=item_id)
             old_parent = item.parent
             
-            # If new_parent_id is None, we're moving to root
-            if new_parent_id is None:
-                new_parent = None
-            else:
+            if new_parent_id is not None:
                 try:
                     new_parent = Item.objects.get(id=new_parent_id)
-                    if new_parent == item:
-                        raise ValidationError("Item cannot be its own parent")
-                    
-                    # Check for circular dependency
-                    current = new_parent
-                    while current:
-                        if current == item:
-                            raise ValidationError("Circular dependency detected")
-                        current = current.parent
+                    if item == new_parent or item.is_ancestor_of(new_parent):
+                        raise HttpError(400, {"message": "Circular dependency detected"})
                 except Item.DoesNotExist:
-                    raise HttpError(404, "Parent item not found")
+                    raise HttpError(404, "New parent item not found")
+            else:
+                new_parent = None
             
-            # Only create history if parent actually changes
-            if old_parent != new_parent:
-                ComponentHistory.objects.create(
-                    item=item,
-                    old_parent=old_parent,
-                    new_parent=new_parent
-                )
-
-                # Update the parent field
-                item.parent = new_parent
-                item.full_clean()
-                item.save()
+            # Update parent relationship
+            item.parent = new_parent
+            item.save()
             
-            return item
+            # Create history record
+            ComponentHistory.objects.create(
+                item=item,
+                old_parent=old_parent,
+                new_parent=new_parent
+            )
+            
+            # Refresh and return serialized response
+            item.refresh_from_db()
+            return 200, item  # Django Ninja will use ItemOut schema
     except Item.DoesNotExist:
         raise HttpError(404, "Item not found")
-    except ValidationError as e:
-        raise HttpError(400, dict(e))
 
 
 @router.delete('/items/{item_id}', response={204: None, 404: ErrorResponse})

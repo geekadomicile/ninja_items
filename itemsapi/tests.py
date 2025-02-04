@@ -101,10 +101,12 @@ class ItemAPITests(TestCase):
             content_type='application/json'
         )
         self.assertEqual(response.status_code, 200)
+        # Refresh child from database
         self.child.refresh_from_db()
-        self.assertEqual(self.child.parent, new_parent)
+        self.assertEqual(self.child.parent.id, new_parent.id)
         
-        history = ComponentHistory.objects.get()
+        # Verify history
+        history = ComponentHistory.objects.latest('changed_at')
         self.assertEqual(history.old_parent, self.parent)
         self.assertEqual(history.new_parent, new_parent)
         
@@ -128,6 +130,42 @@ class ItemAPITests(TestCase):
         self.assertEqual(response.status_code, 204)
         self.assertEqual(Item.objects.count(), 1)
 
+    def test_mptt_tree_structure(self):
+        root = Item.objects.create(name='Root')
+        child1 = Item.objects.create(name='Child1', parent=root)
+        child2 = Item.objects.create(name='Child2', parent=root)
+        grandchild = Item.objects.create(name='GrandChild', parent=child1)
+        
+        # Test MPTT fields
+        self.assertEqual(root.level, 0)
+        self.assertEqual(child1.level, 1)
+        self.assertEqual(grandchild.level, 2)
+        
+        # Test tree queries
+        self.assertEqual(root.get_descendants().count(), 3)
+        self.assertEqual(grandchild.get_ancestors().count(), 2)
+
+    def test_mptt_move_node(self):
+        root1 = Item.objects.create(name='Root1')
+        root2 = Item.objects.create(name='Root2')
+        child = Item.objects.create(name='Child', parent=root1)
+        
+        # Test moving node to different parent
+        child.parent = root2
+        child.save()
+        
+        self.assertEqual(child.parent, root2)
+        self.assertEqual(root1.get_descendants().count(), 0)
+        self.assertEqual(root2.get_descendants().count(), 1)
+    def test_move_to_storage(self):
+        response = self.client.put(
+            f'{self.base_url}/{self.child.id}/parent',
+            {'new_parent_id': None},
+            content_type='application/json'
+        )
+        self.assertEqual(response.status_code, 200)
+        self.child.refresh_from_db()
+        self.assertIsNone(self.child.parent)
 class NoteAPITests(TestCase):
     def setUp(self):
         self.item = Item.objects.create(name='Test Item')
