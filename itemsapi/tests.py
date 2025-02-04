@@ -1,4 +1,10 @@
 # tests.py
+"""
+This module contains test cases for the Items API, including tests for item creation, retrieval, 
+update, hierarchical listing, parent change, deletion, and associated notes and attachments. 
+It also includes tests for the ComponentHistory model to track changes in item parent relationships. 
+The tests are implemented using Django's TestCase class and cover both successful and error scenarios.
+"""
 from django.test import TestCase
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.exceptions import ValidationError

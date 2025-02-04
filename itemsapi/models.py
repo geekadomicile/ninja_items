@@ -28,7 +28,7 @@ class Item(models.Model):
         ]
 
 class ComponentHistory(models.Model):
-    item = models.ForeignKey(Item, on_delete=models.SET_NULL, null=True, related_name='history')#@todo: check if this is correct(maybe we shoulduse .SET_NULL)
+    item = models.ForeignKey(Item, on_delete=models.SET_NULL, null=True, related_name='history')#@todo: check if this is correct(maybe we shoulduse .SET_NULL or .CASCADE)
     old_parent = models.ForeignKey(Item, on_delete=models.SET_NULL, null=True, related_name='old_parent_history')
     new_parent = models.ForeignKey(Item, on_delete=models.SET_NULL, null=True, related_name='new_parent_history')
     changed_at = models.DateTimeField(auto_now_add=True)
