@@ -239,6 +239,9 @@ def partial_update_item(request, item_id: int, data: ItemUpdate):
         raise HttpError(400, dict(e))
 @router.get('/items/search', response=List[ItemOut])
 def search_items(request, qr_code: str = None, name: str = None, description: str = None):
+    print("\nSearch Parameters:")
+    print(f"name: {name}, qr_code: {qr_code}, description: {description}")
+
     filters = []
     if qr_code:
         filters.append(models.Q(qr_code=qr_code))
@@ -248,21 +251,33 @@ def search_items(request, qr_code: str = None, name: str = None, description: st
         filters.append(models.Q(description__icontains=description))
 
     if filters:
-        # First get the matching items
-        matches = Item.objects.filter(reduce(operator.or_, filters))
+        # Get direct matches
+        direct_matches = Item.objects.filter(reduce(operator.or_, filters))
+        print("\nDirect Matches:")
+        for item in direct_matches:
+            print(f"- {item.name} (id:{item.id}, tree_id:{item.tree_id}, lft:{item.lft}, rght:{item.rght})")
         
-        # Then get a queryset of all matches plus their descendants
+        # Get all descendants
         all_items = Item.objects.none()
-        for item in matches:
-            # Include the item itself and its descendants
+        for item in direct_matches:
+            descendant_filter = models.Q(tree_id=item.tree_id, lft__gt=item.lft, rght__lt=item.rght)
+            descendants = Item.objects.filter(descendant_filter)
+            print(f"\nDescendants for {item.name}:")
+            for desc in descendants:
+                print(f"- {desc.name} (id:{desc.id}, tree_id:{desc.tree_id}, lft:{desc.lft}, rght:{desc.rght})")
+            
             all_items = all_items | Item.objects.filter(
-                models.Q(pk=item.pk) | models.Q(tree_id=item.tree_id, lft__gt=item.lft, rght__lt=item.rght)
+                models.Q(pk=item.pk) | descendant_filter
             )
         
-        return all_items.distinct().prefetch_related(*Item.get_prefetch_fields())
+        final_results = all_items.distinct().prefetch_related(*Item.get_prefetch_fields())
+        print("\nFinal Results:")
+        for item in final_results:
+            print(f"- {item.name}")
+        
+        return final_results
     
     return Item.objects.none()
-
 @router.put('/items/{item_id}/parent', response={200: ItemOut, 404: ErrorResponse, 400: ValidationErrorResponse})
 def change_parent(request, item_id: int, data: ItemUpdate):
     """Change item's parent, checking for circular dependencies"""

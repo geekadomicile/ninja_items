@@ -218,13 +218,31 @@ class ItemAPITests(TestCase):
         names = [item['name'] for item in data]
         self.assertEqual(names, ['Computer', 'Motherboard', 'CPU'])
     def test_search_with_descendants(self):
+        # Create test data
         root = Item.objects.create(name='Computer')
         motherboard = Item.objects.create(name='Motherboard', parent=root)
         cpu = Item.objects.create(name='CPU', parent=motherboard)
         
+        print("\nTree Structure:")
+        print(f"Root: {root.name} (id:{root.id}, tree_id:{root.tree_id}, lft:{root.lft}, rght:{root.rght})")
+        print(f"Motherboard: {motherboard.name} (id:{motherboard.id}, tree_id:{motherboard.tree_id}, lft:{motherboard.lft}, rght:{motherboard.rght})")
+        print(f"CPU: {cpu.name} (id:{cpu.id}, tree_id:{cpu.tree_id}, lft:{cpu.lft}, rght:{cpu.rght})")
+
+        # Debug database state
+        print("\nAll Items in DB:")
+        for item in Item.objects.all():
+            print(f"- {item.name}: parent={item.parent.name if item.parent else 'None'}, "
+                  f"tree_id={item.tree_id}, lft={item.lft}, rght={item.rght}")
+
         response = self.client.get(f'{self.base_url}/search?name=mother')
         data = response.json()
         
+        print("\nSearch Response:")
+        print(f"Results count: {len(data)}")
+        print("Found items:")
+        for item in data:
+            print(f"- {item['name']} (parent_id: {item['parent_id']})")
+
         self.assertEqual(len(data), 2)  # Should return Motherboard and CPU
         names = [item['name'] for item in data]
         self.assertIn('Motherboard', names)
