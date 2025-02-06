@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from mptt.models import MPTTModel, TreeForeignKey
 
 class Item(MPTTModel):
+    id = models.AutoField(primary_key=True)
     parent = TreeForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True, related_name='children')
     name = models.CharField(max_length=255)
     qr_code = models.CharField(max_length=255, blank=True)
@@ -25,6 +26,17 @@ class Item(MPTTModel):
             'emails',
             'history'
         ]
+    def get_hierarchy_path(self):
+        """Returns path like 'Computer/Motherboard/CPU'"""
+        return '/'.join([item.name for item in self.get_ancestors(include_self=True)])
+    
+    def get_descendants_count(self):
+        """Returns count of all nested components"""
+        return self.get_descendant_count()
+
+    def get_siblings_list(self):
+        """Returns all components at same level"""
+        return self.get_siblings(include_self=False)
 
 class ComponentHistory(models.Model):
     item = models.ForeignKey(Item, on_delete=models.SET_NULL, null=True, related_name='history')#@todo: check if this is correct(maybe we shoulduse .SET_NULL or .CASCADE)

@@ -5,11 +5,15 @@ update, hierarchical listing, parent change, deletion, and associated notes and 
 It also includes tests for the ComponentHistory model to track changes in item parent relationships. 
 The tests are implemented using Django's TestCase class and cover both successful and error scenarios.
 """
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.exceptions import ValidationError
 from .models import Item, Note, Attachment, Email, ComponentHistory
+import logging
+#logging.basicConfig(level=logging.DEBUG)
+#logger = logging.getLogger('django.request')
 
+#@override_settings(DEBUG=True)
 class ItemAPITests(TestCase):
     def setUp(self):
         self.base_url = '/api/items'
@@ -86,23 +90,45 @@ class ItemAPITests(TestCase):
         self.assertEqual(data[0]['children'][0]['name'], 'Child')
 
     def test_list_items_flat(self):
-        response = self.client.get(self.base_url, {'hierarchical': 'false'})
+        """Verify flat list returns all items without nesting"""
+    # Debug database state
+        print("\nDatabase state:")
+        print(f"Total items in DB: {Item.objects.count()}")
+        for item in Item.objects.all():
+            print(f"- Item {item.id}: {item.name} (parent: {item.parent_id})")
+
+        response = self.client.get(f'{self.base_url}?hierarchical=false')
         data = response.json()
-        self.assertEqual(len(data), 2)
-        parent_data = next(item for item in data if item['id'] == self.parent.id)
-        self.assertEqual(parent_data['children'], [])
+        print("\nAPI Response:")
+        print(f"Items returned: {len(data)}")
+        print("Raw response data:", data)
+
+        for item in data:
+            print(f"- Item {item['id']}: {item['name']} (parent: {item['parent_id']})")
+            # Should return all items
+            self.assertEqual(len(data), Item.objects.count())
+        # Items should be in a flat list
+        for item in data:
+            self.assertEqual(item['children'], [])
 
     # Parent Change & History Tests
     def test_change_parent_and_history(self):
-        new_parent = Item.objects.create(name='New Parent')
+        new_parent = Item.objects.create(name='New Parent')    
         response = self.client.put(
+            #f'{self.base_url}/{self.child.id}/parent?new_parent_id={new_parent.id}',
             f'{self.base_url}/{self.child.id}/parent',
-            {'new_parent_id': new_parent.id},
+            {'parent_id': new_parent.id},
             content_type='application/json'
         )
         self.assertEqual(response.status_code, 200)
+
         # Refresh child from database
         self.child.refresh_from_db()
+
+        # First verify parent is not None
+        self.assertIsNotNone(self.child.parent, "Child's parent should not be None")
+
+        # Then verify parent is the new parent
         self.assertEqual(self.child.parent.id, new_parent.id)
         
         # Verify history
@@ -116,13 +142,14 @@ class ItemAPITests(TestCase):
         self.assertEqual(history_data[0]['new_parent_name'], 'New Parent')
 
     def test_circular_parent_error(self):
+        """Verify cannot make an item its own ancestor"""
         response = self.client.put(
             f'{self.base_url}/{self.parent.id}/parent',
-            {'new_parent_id': self.child.id},
+            {'parent_id': self.child.id}, # Try to make item its own parent
             content_type='application/json'
         )
         self.assertEqual(response.status_code, 400)
-        self.assertIn('Circular dependency', response.json()['message'])
+        self.assertIn('Circular dependency', response.json()['detail'])
 
     # Deletion Tests
     def test_delete_item(self):
@@ -166,6 +193,42 @@ class ItemAPITests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.child.refresh_from_db()
         self.assertIsNone(self.child.parent)
+
+    def test_get_item_tree(self):
+        root = Item.objects.create(name='Computer')
+        motherboard = Item.objects.create(name='Motherboard', parent=root)
+        cpu = Item.objects.create(name='CPU', parent=motherboard)
+        
+        response = self.client.get(f'{self.base_url}/{root.id}/tree')
+        data = response.json()
+        
+        self.assertEqual(len(data), 3)  # Root + 2 descendants
+        names = [item['name'] for item in data]
+        self.assertEqual(names, ['Computer', 'Motherboard', 'CPU'])
+
+    def test_get_breadcrumb(self):
+        root = Item.objects.create(name='Computer')
+        motherboard = Item.objects.create(name='Motherboard', parent=root)
+        cpu = Item.objects.create(name='CPU', parent=motherboard)
+        
+        response = self.client.get(f'{self.base_url}/{cpu.id}/breadcrumb')
+        data = response.json()
+        
+        self.assertEqual(len(data), 3)
+        names = [item['name'] for item in data]
+        self.assertEqual(names, ['Computer', 'Motherboard', 'CPU'])
+    def test_search_with_descendants(self):
+        root = Item.objects.create(name='Computer')
+        motherboard = Item.objects.create(name='Motherboard', parent=root)
+        cpu = Item.objects.create(name='CPU', parent=motherboard)
+        
+        response = self.client.get(f'{self.base_url}/search?name=mother')
+        data = response.json()
+        
+        self.assertEqual(len(data), 2)  # Should return Motherboard and CPU
+        names = [item['name'] for item in data]
+        self.assertIn('Motherboard', names)
+        self.assertIn('CPU', names)
 class NoteAPITests(TestCase):
     def setUp(self):
         self.item = Item.objects.create(name='Test Item')
