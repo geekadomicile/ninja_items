@@ -18,9 +18,9 @@ from django.contrib import admin
 from django.urls import path
 from django.conf import settings
 from django.conf.urls.static import static
-from itemsapi.api import api  # Import the api object from itemsapi.api
+from itemsapi.api import api_kiss  # Import the api object from itemsapi.api
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/', api.urls),  # Directly use api.urls
+    path('api/', api_kiss.py.urls),  # Directly use api.urls
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
