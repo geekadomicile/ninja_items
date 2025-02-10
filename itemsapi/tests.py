@@ -10,8 +10,6 @@ class InventorySystemTests(TestCase):
         # Create single TestClient instance for all tests
         cls.client = TestClient(api)
 
-
-
     def setUp(self):
         super().setUp()
         # Create basic inventory structure
@@ -48,7 +46,8 @@ class InventorySystemTests(TestCase):
         
         # Move part to laptop repair
         response = self.client.put(f"/api/items/{thermal_paste.id}/move", 
-            json={"new_parent_id": laptop.id}
+            json={"new_parent_id": laptop.id},
+            content_type="application/json"
         )
         self.assertEqual(response.status_code, 200)
         
@@ -68,17 +67,23 @@ class InventorySystemTests(TestCase):
     def test_component_lifecycle(self):
         """Test component creation, movement and deletion"""
         # Create component
-        response = self.client.post(f"/api/items", json={
-            'name': 'RAM Module',
-            'description': '8GB DDR4',
-            'parent_id': self.laptop.id
-        })
+        response = self.client.post(f"/api/items", json=
+            {
+                'name': 'RAM Module',
+                'description': '8GB DDR4',
+                'parent_id': self.laptop.id,
+                'qr_code': None 
+            },
+        content_type="application/json"
+        )
         self.assertEqual(response.status_code, 201)
+        print('\n-----\n'+response()+"\n-----\n")
         ram_id = response.json()['id']
         
         # Move component
         response = self.client.put(f"/api/items/{ram_id}/move", 
-            json={"new_parent_id": self.storage.id}
+            json={"new_parent_id": self.storage.id},
+            content_type="application/json"
         )
         self.assertEqual(response.status_code, 200)
         
@@ -138,7 +143,8 @@ class InventorySystemTests(TestCase):
         child = Item.objects.create(name="Child", parent=parent)
         
         response = self.client.put(f"/api/items/{parent.id}/move", 
-            json={"new_parent_id": child.id}
+            json={"new_parent_id": child.id},
+            content_type="application/json"
         )
         self.assertEqual(response.status_code, 400)
 
