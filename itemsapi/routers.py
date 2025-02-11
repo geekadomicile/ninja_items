@@ -4,8 +4,10 @@ from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from mptt.exceptions import InvalidMove
 from typing import List, Optional
+from django.core.exceptions import ValidationError
 from .models import ComponentHistory, Item
-from .schemas import ComponentHistorySchema, ItemCreate, ItemOut
+from .schemas import ComponentHistorySchema, ItemCreate, ItemOut, MovePayload
+from django.db import transaction
 
 router = Router()
 @router.get("/items", response=List[ItemOut])
@@ -41,8 +43,7 @@ def search_items(request, q: str):
 
 @router.post("/items", response={201: ItemOut})
 def create_item(request, payload: ItemCreate):
-    """Create new component, optionally as part of another component"""
-    try:
+    with transaction.atomic():
         parent = get_object_or_404(Item, id=payload.parent_id) if payload.parent_id else None
         item = Item.objects.create(
             name=payload.name,
@@ -50,16 +51,8 @@ def create_item(request, payload: ItemCreate):
             qr_code=payload.qr_code,
             parent=parent
         )
-        # Record creation history
-        ComponentHistory.objects.create(
-            item=item,
-            old_parent=None,
-            new_parent=parent,
-            action_type=ComponentHistory.CREATED
-        )
         return 201, item
-    except InvalidMove as e:
-        raise HttpError(400, "Invalid component placement - would create circular dependency")
+    
 @router.get("/items/{item_id}/history", response=List[ComponentHistorySchema])
 def get_item_history(request, item_id: int):
     """Get complete movement history for a component"""
@@ -67,42 +60,20 @@ def get_item_history(request, item_id: int):
     return item.history.all()
 
 @router.put("/items/{item_id}/move", response=ItemOut)
-def move_item(request, item_id: int, new_parent_id: Optional[int] = None):
-    """
-    Move component to new parent with its entire subtree
-    Examples:
-    - Moving GPU with waterblock between computers
-    - Removing RAM to storage (new_parent_id=None)
-    - Adding CPU to motherboard
-    """
-    try:
+def move_item(request, item_id: int, payload: MovePayload):
+    with transaction.atomic():
         item = get_object_or_404(Item, id=item_id)
-        old_parent = item.parent  # Capture old parent before move
-        new_parent = get_object_or_404(Item, id=new_parent_id) if new_parent_id else None
-        # Record history before move
-        ComponentHistory.objects.create(
-            item=item,
-            old_parent=old_parent,
-            new_parent=new_parent,
-            action_type=ComponentHistory.MOVED
-        )
-        
-        item.move_to(new_parent)
-        return item
-    except InvalidMove as e:
-        raise HttpError(400, "Invalid move - would create circular dependency")
+        new_parent = get_object_or_404(Item, id=payload.new_parent_id) if payload.new_parent_id else None
+        try:
+            moved_item = item.move_under(new_parent)
+            return moved_item
+        except ValidationError as e:
+            raise HttpError(400, str(e))
+
 
 @router.delete("/items/{item_id}", response={204: None})
 def delete_item(request, item_id: int):
     """Delete component and all its subcomponents"""
     item = get_object_or_404(Item, id=item_id)
-    # Record deletion history
-    ComponentHistory.objects.create(
-        item=item,
-        old_parent=item.parent,
-        new_parent=None,
-        action_type=ComponentHistory.DELETED
-    )
     item.delete()
     return 204, None
-
