@@ -44,11 +44,11 @@ class ItemBase(Schema):
         return obj.get_level()
     
 class MovePayload(Schema):
-    new_parent_id: Optional[int] = None
+    new_parent_id: Optional[int] = 0
     
     @field_validator('new_parent_id')
     def validate_new_parent(cls, value):
-        if value is not None and value <= 0:
+        if value is not None and value < 0:
             raise ValueError("Parent ID must be a positive integer")
         return value
 

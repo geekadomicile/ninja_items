@@ -60,15 +60,15 @@ def get_item_history(request, item_id: int):
     return item.history.all()
 
 @router.put("/items/{item_id}/move", response=ItemOut)
-def move_item(request, item_id: int, payload: MovePayload):
+def move_item(request, item_id: int, json: MovePayload):
     with transaction.atomic():
         item = get_object_or_404(Item, id=item_id)
-        new_parent = get_object_or_404(Item, id=payload.new_parent_id) if payload.new_parent_id else None
+        new_parent = get_object_or_404(Item, id=json.new_parent_id) if json.new_parent_id else None
         try:
             moved_item = item.move_under(new_parent)
             return moved_item
         except ValidationError as e:
-            raise HttpError(400, str(e))
+            raise HttpError(422, str(e))
 
 
 @router.delete("/items/{item_id}", response={204: None})

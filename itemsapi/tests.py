@@ -62,7 +62,7 @@ class InventorySystemTests(TestCase):
             description="Customer laptop - overheating",
             parent=self.workbench
         )
-        
+        print(f"Created test laptop with ID: {laptop.id}, under workbench ID: {self.workbench.id}")
         # Test documentation
         note = Note.objects.create(
             item=laptop,
@@ -75,11 +75,17 @@ class InventorySystemTests(TestCase):
             description="Thermal compound",
             parent=self.storage
         )
+        print(f"Created thermal_paste with ID: {thermal_paste.id}, under storage ID: {self.storage.id}")
+    
+        print(f"Attempting move operation: thermal_paste {thermal_paste.id} -> laptop {laptop.id}")
+       
         
         response = self.client.put(
             f"/api/items/{thermal_paste.id}/move",
-            json={"new_parent_id": laptop.id}
+            {"new_parent_id": laptop.id},
+            content_type="application/json"
         )
+        print(f"Move operation response: {response.json()}")
         self.assertEqual(response.status_code, 200)
         
         # Verify documentation
@@ -101,16 +107,16 @@ class InventorySystemTests(TestCase):
     def test_component_lifecycle(self):
         """Test component CRUD operations and movement tracking"""
         # Create component
-        payload = {
-            'name': 'RAM Module',
+        payload = {'name': 'RAM Module',
             'description': '8GB DDR4',
             'parent_id': self.laptop.id,
             'qr_code': 'RAM003'
-        }
+            }
        
         response = self.client.post(
             "/api/items",
-            json=payload
+            payload,
+            content_type="application/json"
         )
         if response.status_code != 201:
             print(f"Error creating item: {response.content}")
@@ -120,7 +126,8 @@ class InventorySystemTests(TestCase):
         # Test movement
         response = self.client.put(
             f"/api/items/{ram_id}/move",
-            json={"new_parent_id": self.storage.id}
+            {"new_parent_id": self.storage.id},
+            content_type='application/json'
         )
         self.assertEqual(response.status_code, 200)
         
@@ -219,9 +226,10 @@ class InventorySystemTests(TestCase):
         
         response = self.client.put(
             f"/api/items/{parent.id}/move",
-            json={"new_parent_id": child.id}
+            {"new_parent_id": child.id},
+            content_type='application/json'
         )
-        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.status_code, 422)
 
     def tearDown(self):
         """Clean up after each test"""
