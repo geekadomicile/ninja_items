@@ -9,7 +9,7 @@ from django.core.exceptions import ValidationError
 from .models import ComponentHistory, Item, Note, File as FileModel
 from .schemas import (
     ComponentHistorySchema, ItemCreate, ItemOut, MovePayload,
-    NoteCreate, NoteSchema, FileSchema
+    NoteCreate, NoteSchema, FileSchema, ListingUpdate
 )
 from django.db import transaction
 
@@ -42,7 +42,8 @@ def search_items(request, q: str):
     return Item.objects.filter(
         Q(name__icontains=q) |
         Q(description__icontains=q) |
-        Q(qr_code__iexact=q)
+        Q(qr_code__iexact=q) |
+        Q(listing_json__icontains=q)
     ).prefetch_related(*Item.get_prefetch_fields())
 
 @router.post("/items", response={201: ItemOut})
@@ -98,6 +99,14 @@ def get_item_notes(request, item_id: int):
     """Get all notes for an item"""
     item = get_object_or_404(Item, id=item_id)
     return item.notes.all().order_by('-created_at')
+
+@router.put("/items/{item_id}/listing", response=ItemOut)
+def update_listing(request, item_id: int, payload: ListingUpdate):
+    """Update item's listing data"""
+    item = get_object_or_404(Item, id=item_id)
+    item.listing_json = payload.listing_json
+    item.save()
+    return item
 
 @router.post("/items/{item_id}/files", response=FileSchema)
 def upload_file(request, item_id: int, file: UploadedFile = File(...)):

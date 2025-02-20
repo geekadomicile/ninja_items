@@ -38,10 +38,14 @@ class EmailSchema(AttachmentBase):
     received_at: datetime
     
 # Item schemas with inheritance
+class ListingUpdate(Schema):
+    listing_json: str
+
 class ItemBase(Schema):
     name: str
     description: Optional[str] = None
     qr_code: Optional[str] = None
+    listing_json: Optional[str] = None
     
     # Remove level from base schema since it's computed
     @staticmethod
