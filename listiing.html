@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Export Item Listing</title>
+    <style>
+        .export-form {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .image-preview {
+            display: flex;
+            gap: 10px;
+            margin: 10px 0;
+        }
+
+        .image-preview img {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 4px;
+        }
+
+        .category-group {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .price-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .price-group input {
+            width: 150px;
+        }
+    </style>
+</head>
+<body>
+    <div class="export-form">
+        <h2>Export Item for Listing</h2>
+        <form id="listingForm">
+            <div class="form-group">
+                <label>Pictures (up to 3)</label>
+                <input type="file" id="pictures" multiple accept="image/*" max="3">
+                <div id="imagePreview" class="image-preview"></div>
+            </div>
+
+            <div class="form-group">
+                <label>Subject</label>
+                <input type="text" id="subject" required>
+            </div>
+
+            <div class="category-group">
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="category" required>
+                        <option value="Électronique">Électronique</option>
+                        <option value="Informatique">Informatique</option>
+                        <!-- Add more categories -->
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Subcategory</label>
+                    <select id="subcategory" required>
+                        <option value="Ordinateurs">Ordinateurs</option>
+                        <option value="Composants">Composants</option>
+                        <!-- Add more subcategories -->
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Brand</label>
+                <input type="text" id="brand" required>
+            </div>
+
+            <div class="form-group">
+                <label>Type</label>
+                <input type="text" id="type" required>
+            </div>
+
+            <div class="form-group">
+                <label>Usage</label>
+                <select id="usage" required>
+                    <option value="Polyvalent">Polyvalent</option>
+                    <option value="Gaming">Gaming</option>
+                    <option value="Bureautique">Bureautique</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Condition</label>
+                <select id="condition" required>
+                    <option value="Neuf">Neuf</option>
+                    <option value="Très bon état">Très bon état</option>
+                    <option value="Bon état">Bon état</option>
+                    <option value="État moyen">État moyen</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="description" rows="4" required></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Price (€)</label>
+                <div class="price-group">
+                    <input type="number" id="price" required min="0">
+                    <span>€</span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Location</label>
+                <input type="text" id="location" required>
+            </div>
+
+            <button type="submit">Generate Listing</button>
+        </form>
+    </div>
+
+    <script>
+        class ListingExporter {
+            constructor() {
+                this.form = document.getElementById('listingForm');
+                this.imagePreview = document.getElementById('imagePreview');
+                this.setupListeners();
+            }
+
+            setupListeners() {
+                this.form.addEventListener('submit', (e) => this.handleSubmit(e));
+                document.getElementById('pictures').addEventListener('change', 
+                    (e) => this.handleImagePreview(e));
+            }
+
+            handleImagePreview(e) {
+                this.imagePreview.innerHTML = '';
+                const files = Array.from(e.target.files).slice(0, 3);
+                
+                files.forEach(file => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const img = document.createElement('img');
+                        img.src = e.target.result;
+                        this.imagePreview.appendChild(img);
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            async handleSubmit(e) {
+                e.preventDefault();
+                const formData = new FormData(this.form);
+                const listing = {
+                    pictures: Array.from(formData.getAll('pictures')).map(file => file.name),
+                    subject: formData.get('subject'),
+                    category: formData.get('category'),
+                    subcategory: formData.get('subcategory'),
+                    brand: formData.get('brand'),
+                    type: formData.get('type'),
+                    usage: formData.get('usage'),
+                    condition: formData.get('condition'),
+                    description: formData.get('description'),
+                    price: formData.get('price'),
+                    location: formData.get('location')
+                };
+
+                console.log('Listing Data:', listing);
+                // Here you would typically send this to your backend
+                // await fetch('/api/export-listing', {...})
+            }
+        }
+
+        new ListingExporter();
+    </script>
+</body>
+</html>

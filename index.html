@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Manager</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="panel">
+            <h2>Add New Item</h2>
+            <form id="itemForm">
+                <div class="form-group">
+                    <label>Name</label>
+                    <input type="text" id="name" required>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="description" rows="3"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>QR Code</label>
+                    <input type="text" id="qr_code">
+                </div>
+                <div class="form-group">
+                    <label>Parent Item</label>
+                    <select id="parent_id">
+                        <option value="">No Parent</option>
+                    </select>
+                </div>
+                <button type="submit">Add Item</button>
+            </form>
+        </div>
+
+        <div class="panel">
+            <h2>Add Attachments</h2>
+            <div class="tabs">
+                <button class="tab-btn active" data-tab="notes">Notes</button>
+                <button class="tab-btn" data-tab="files">Files</button>
+                <button class="tab-btn" data-tab="emails">Emails</button>
+                <button class="tab-btn" data-tab="codes">Codes</button>
+            </div>
+        
+            <div class="tab-content active" id="notes-tab">
+                <form id="noteForm">
+                    <div class="form-group">
+                        <label>Select Item</label>
+                        <select id="noteItemId" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Content</label>
+                        <textarea id="noteContent" rows="4" required></textarea>
+                    </div>
+                    <button type="submit">Add Note</button>
+                </form>
+            </div>
+        
+            <div class="tab-content" id="files-tab">
+                <form id="fileForm">
+                    <div class="form-group">
+                        <label>Select Item</label>
+                        <select id="fileItemId" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>File</label>
+                        <input type="file" id="fileInput" required>
+                    </div>
+                    <button type="submit">Upload File</button>
+                </form>
+            </div>
+        
+            <div class="tab-content" id="emails-tab">
+                <form id="emailForm">
+                    <div class="form-group">
+                        <label>Select Item</label>
+                        <select id="emailItemId" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Subject</label>
+                        <input type="text" id="emailSubject" required>
+                    </div>
+                    <div class="form-group">
+                        <label>From</label>
+                        <input type="email" id="emailFrom" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Body</label>
+                        <textarea id="emailBody" rows="4" required></textarea>
+                    </div>
+                    <button type="submit">Add Email</button>
+                </form>
+            </div>
+        
+            <div class="tab-content" id="codes-tab">
+                <form id="codeForm">
+                    <div class="form-group">
+                        <label>Select Item</label>
+                        <select id="codeItemId" required></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Code</label>
+                        <input type="text" id="codeValue" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Source</label>
+                        <input type="text" id="codeSource" required>
+                    </div>
+                    <button type="submit">Add Code</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>Inventory Tree</h2>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search items...">
+            </div>
+            <div id="treeView"></div>
+        </div>
+    </div>
+
+    <div id="moveModal" class="modal">
+        <div class="modal-content">
+            <h3>Move Item</h3>
+            <select id="newParentId"></select>
+            <div class="actions">
+                <button onclick="inventoryManager.confirmMove()">Confirm</button>
+                <button onclick="inventoryManager.closeModal()">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="inventory.js"></script>
+    <script>
+        const inventoryManager = new InventoryManager();
+    </script>
+</body>
+</html>

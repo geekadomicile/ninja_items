@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 
 class Item(MPTTModel):
     name = models.CharField(max_length=255, db_index=True)
+    listing_json = models.TextField(blank=True, null=True)
     qr_code = models.CharField(max_length=255, db_index=True, blank=True, null=True)
     description = models.TextField(blank=True, null=True)
     parent = TreeForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='children')
@@ -76,6 +77,7 @@ class CodeIdentifier(models.Model):
 class Note(models.Model):
     item = models.ForeignKey(Item, on_delete=models.CASCADE, related_name='notes')
     content = models.TextField()
+    author = models.CharField(max_length=255, default='System')
     created_at = models.DateTimeField(auto_now_add=True)
 
 class File(models.Model):

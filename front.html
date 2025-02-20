@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Manager</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #34495e;
+            --accent-color: #3498db;
+            --success-color: #2ecc71;
+            --error-color: #e74c3c;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f6fa;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 20px;
+        }
+
+        .panel {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        input, select, button {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: var(--secondary-color);
+        }
+
+        .tree-item {
+            border-left: 2px solid var(--accent-color);
+            margin: 10px 0;
+            padding-left: 15px;
+        }
+
+        .item-details {
+            background: white;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 5px 0;
+        }
+
+        .attachments {
+            font-size: 0.9em;
+            color: var(--secondary-color);
+            margin-top: 5px;
+        }
+
+        .path {
+            font-size: 0.8em;
+            color: var(--secondary-color);
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="panel">
+            <h2>Add New Item</h2>
+            <form id="itemForm">
+                <div class="form-group">
+                    <input type="text" id="name" placeholder="Item Name" required>
+                </div>
+                <div class="form-group">
+                    <input type="text" id="description" placeholder="Description">
+                </div>
+                <div class="form-group">
+                    <input type="text" id="qr_code" placeholder="QR Code">
+                </div>
+                <div class="form-group">
+                    <select id="parent_id">
+                        <option value="">No Parent</option>
+                    </select>
+                </div>
+                <button type="submit">Add Item</button>
+            </form>
+        </div>
+
+        <div class="panel">
+            <h2>Inventory Tree</h2>
+            <div id="treeView"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:8000/api';
+
+        class InventoryManager {
+            constructor() {
+                this.items = [];
+                this.init();
+            }
+
+            async init() {
+                await this.fetchInventory();
+                this.setupEventListeners();
+                this.updateParentSelect();
+            }
+
+            async fetchInventory() {
+                try {
+                    const response = await fetch(`${API_URL}/items`);
+                    this.items = await response.json();
+                    this.renderInventoryTree();
+                } catch (error) {
+                    console.error('Failed to fetch inventory:', error);
+                }
+            }
+
+            setupEventListeners() {
+                document.getElementById('itemForm').addEventListener('submit', 
+                    (e) => this.handleFormSubmit(e));
+            }
+
+            updateParentSelect() {
+                const select = document.getElementById('parent_id');
+                select.innerHTML = '<option value="">No Parent</option>';
+                
+                const addOption = (item, level = 0) => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = '─'.repeat(level) + ' ' + item.name;
+                    select.appendChild(option);
+
+                    item.children?.forEach(child => addOption(child, level + 1));
+                };
+
+                this.items.forEach(item => addOption(item));
+            }
+
+            async handleFormSubmit(e) {
+                e.preventDefault();
+                const formData = {
+                    name: document.getElementById('name').value,
+                    description: document.getElementById('description').value,
+                    qr_code: document.getElementById('qr_code').value,
+                    parent_id: document.getElementById('parent_id').value || null
+                };
+
+                try {
+                    const response = await fetch(`${API_URL}/items`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(formData)
+                    });
+
+                    if (response.ok) {
+                        await this.fetchInventory();
+                        e.target.reset();
+                    }
+                } catch (error) {
+                    console.error('Failed to add item:', error);
+                }
+            }
+
+            renderInventoryTree() {
+                const treeView = document.getElementById('treeView');
+                treeView.innerHTML = '';
+
+                const renderItem = (item) => {
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'tree-item';
+                    itemDiv.innerHTML = `
+                        <div class="item-details">
+                            <strong>${item.name}</strong>
+                            <p>${item.description || 'No description'}</p>
+                            <div class="path">Path: ${item.full_path}</div>
+                            <div class="attachments">
+                                Attachments: ${item.attachment_count}
+                            </div>
+                        </div>
+                    `;
+
+                    if (item.children?.length > 0) {
+                        const childrenDiv = document.createElement('div');
+                        childrenDiv.style.marginLeft = '20px';
+                        item.children.forEach(child => {
+                            childrenDiv.appendChild(renderItem(child));
+                        });
+                        itemDiv.appendChild(childrenDiv);
+                    }
+
+                    return itemDiv;
+                };
+
+                this.items.forEach(item => {
+                    treeView.appendChild(renderItem(item));
+                });
+                
+                this.updateParentSelect();
+            }
+        }
+
+        // Initialize the application
+        const inventoryManager = new InventoryManager();
+    </script>
+</body>
+</html>

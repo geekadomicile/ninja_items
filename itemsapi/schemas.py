@@ -19,8 +19,13 @@ class ComponentHistorySchema(Schema):
     action_type: str
     changed_at: datetime
 
+class NoteCreate(Schema):
+    content: str
+    author: str = "System"  # Default author if not provided
+
 class NoteSchema(AttachmentBase):
     content: str
+    author: str
 
 class FileSchema(AttachmentBase):
     file: str

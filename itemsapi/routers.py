@@ -1,12 +1,16 @@
-from ninja import Router
+from ninja import Router, File
 from ninja.errors import HttpError
+from ninja.files import UploadedFile
 from django.shortcuts import get_object_or_404
 from django.db.models import Q
 from mptt.exceptions import InvalidMove
 from typing import List, Optional
 from django.core.exceptions import ValidationError
-from .models import ComponentHistory, Item
-from .schemas import ComponentHistorySchema, ItemCreate, ItemOut, MovePayload
+from .models import ComponentHistory, Item, Note, File as FileModel
+from .schemas import (
+    ComponentHistorySchema, ItemCreate, ItemOut, MovePayload,
+    NoteCreate, NoteSchema, FileSchema
+)
 from django.db import transaction
 
 router = Router()
@@ -77,3 +81,31 @@ def delete_item(request, item_id: int):
     item = get_object_or_404(Item, id=item_id)
     item.delete()
     return 204, None
+
+@router.post("/items/{item_id}/notes", response=NoteSchema)
+def add_note(request, item_id: int, payload: NoteCreate):
+    """Add a note to an item"""
+    item = get_object_or_404(Item, id=item_id)
+    note = Note.objects.create(
+        item=item,
+        content=payload.content,
+        author=payload.author
+    )
+    return note
+
+@router.get("/items/{item_id}/notes", response=List[NoteSchema])
+def get_item_notes(request, item_id: int):
+    """Get all notes for an item"""
+    item = get_object_or_404(Item, id=item_id)
+    return item.notes.all().order_by('-created_at')
+
+@router.post("/items/{item_id}/files", response=FileSchema)
+def upload_file(request, item_id: int, file: UploadedFile = File(...)):
+    """Upload a file attachment to an item"""
+    item = get_object_or_404(Item, id=item_id)
+    file_obj = FileModel.objects.create(
+        item=item,
+        file=file,
+        file_type=file.content_type
+    )
+    return file_obj
