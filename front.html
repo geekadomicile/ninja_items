@@ -20,6 +20,41 @@
             background-color: #f5f6fa;
         }
 
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+
+        .modal.active {
+            display: block;
+        }
+
+        .modal-content {
+            position: relative;
+            background: white;
+            width: 90%;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            border-radius: 8px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .close-modal {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            cursor: pointer;
+            font-size: 24px;
+        }
+
         .container {
             display: grid;
             grid-template-columns: 300px 1fr;
@@ -37,7 +72,7 @@
             margin-bottom: 15px;
         }
 
-        input, select, button {
+        input, select, textarea, button {
             width: 100%;
             padding: 8px;
             margin: 5px 0;
@@ -81,26 +116,157 @@
             color: var(--secondary-color);
             margin-top: 5px;
         }
+
+        .search-box {
+            margin-bottom: 15px;
+        }
+
+        .search-box input {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .note-item {
+            background: #f5f5f5;
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 4px;
+        }
+
+        .note-content {
+            margin-bottom: 5px;
+        }
+
+        .note-metadata {
+            font-size: 0.8em;
+            color: var(--secondary-color);
+        }
+
+        .file-item {
+            margin: 5px 0;
+        }
+
+        .file-item a {
+            color: var(--accent-color);
+            text-decoration: none;
+        }
+
+        .file-item a:hover {
+            text-decoration: underline;
+        }
+
+        .actions {
+            margin-top: 10px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+
+        .actions button {
+            width: auto;
+            min-width: 80px;
+        }
     </style>
 </head>
 <body>
+    <!-- Listing Form Modal -->
+    <div id="listingModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="document.getElementById('listingModal').classList.remove('active')">&times;</span>
+            <h2>Export Item for Listing</h2>
+            <form id="listingForm">
+                <input type="hidden" id="listingItemId">
+                <div class="form-group">
+                    <label>Subject</label>
+                    <input type="text" id="subject" required>
+                </div>
+                <div class="form-group">
+                    <label>Category</label>
+                    <select id="category" required>
+                        <option value="Électronique">Électronique</option>
+                        <option value="Informatique">Informatique</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Subcategory</label>
+                    <select id="subcategory" required>
+                        <option value="Ordinateurs">Ordinateurs</option>
+                        <option value="Composants">Composants</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Brand</label>
+                    <input type="text" id="brand" required>
+                </div>
+                <div class="form-group">
+                    <label>Type</label>
+                    <input type="text" id="type" required>
+                </div>
+                <div class="form-group">
+                    <label>Usage</label>
+                    <select id="usage" required>
+                        <option value="Polyvalent">Polyvalent</option>
+                        <option value="Gaming">Gaming</option>
+                        <option value="Bureautique">Bureautique</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Condition</label>
+                    <select id="condition" required>
+                        <option value="Neuf">Neuf</option>
+                        <option value="Très bon état">Très bon état</option>
+                        <option value="Bon état">Bon état</option>
+                        <option value="État moyen">État moyen</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea id="listing_description" rows="4" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Price (€)</label>
+                    <input type="number" id="price" required min="0">
+                </div>
+                <div class="form-group">
+                    <label>Location</label>
+                    <input type="text" id="location" required>
+                </div>
+                <button type="submit">Generate Listing</button>
+            </form>
+        </div>
+    </div>
+
     <div class="container">
         <div class="panel">
             <h2>Add New Item</h2>
             <form id="itemForm">
                 <div class="form-group">
-                    <input type="text" id="name" placeholder="Item Name" required>
+                    <label>Name</label>
+                    <input type="text" id="name" required>
                 </div>
                 <div class="form-group">
-                    <input type="text" id="description" placeholder="Description">
+                    <label>Description</label>
+                    <textarea id="item_description" rows="3"></textarea>
                 </div>
                 <div class="form-group">
-                    <input type="text" id="qr_code" placeholder="QR Code">
+                    <label>QR Code</label>
+                    <input type="text" id="qr_code">
                 </div>
                 <div class="form-group">
+                    <label>Parent Item</label>
                     <select id="parent_id">
                         <option value="">No Parent</option>
                     </select>
+                </div>
+                <div class="form-group">
+                    <label>Note</label>
+                    <textarea id="initial_note" rows="3" placeholder="Add a note (optional)"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>File</label>
+                    <input type="file" id="initial_file">
                 </div>
                 <button type="submit">Add Item</button>
             </form>
@@ -108,7 +274,22 @@
 
         <div class="panel">
             <h2>Inventory Tree</h2>
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="Search items...">
+            </div>
             <div id="treeView"></div>
+        </div>
+
+        <div id="moveModal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal" onclick="document.getElementById('moveModal').classList.remove('active')">&times;</span>
+                <h3>Move Item</h3>
+                <select id="newParentId"></select>
+                <div class="actions">
+                    <button onclick="inventoryManager.confirmMove()">Confirm</button>
+                    <button onclick="inventoryManager.closeModal()">Cancel</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -140,6 +321,104 @@
             setupEventListeners() {
                 document.getElementById('itemForm').addEventListener('submit', 
                     (e) => this.handleFormSubmit(e));
+                document.getElementById('listingForm').addEventListener('submit',
+                    (e) => this.handleListingSubmit(e));
+                document.getElementById('searchInput').addEventListener('input',
+                    (e) => this.handleSearch(e));
+            }
+
+            handleSearch(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                const items = document.querySelectorAll('.tree-item');
+                items.forEach(item => {
+                    const text = item.textContent.toLowerCase();
+                    item.style.display = text.includes(searchTerm) ? '' : 'none';
+                });
+            }
+
+            async deleteItem(id) {
+                if (!confirm('Are you sure you want to delete this item?')) return;
+                try {
+                    const response = await fetch(`${API_URL}/items/${id}`, { method: 'DELETE' });
+                    if (response.ok) {
+                        await this.fetchInventory();
+                    }
+                } catch (error) {
+                    console.error('Failed to delete item:', error);
+                }
+            }
+
+            showMoveModal(id) {
+                this.selectedItemId = id;
+                document.getElementById('moveModal').classList.add('active');
+                this.updateParentSelect();
+            }
+
+            closeModal() {
+                document.getElementById('moveModal').classList.remove('active');
+                this.selectedItemId = null;
+            }
+
+            async confirmMove() {
+                const newParentId = document.getElementById('newParentId').value;
+                try {
+                    const response = await fetch(`${API_URL}/items/${this.selectedItemId}/move`, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({ new_parent_id: newParentId || null })
+                    });
+                    if (response.ok) {
+                        this.closeModal();
+                        await this.fetchInventory();
+                    }
+                } catch (error) {
+                    console.error('Failed to move item:', error);
+                }
+            }
+
+            async addNote(itemId) {
+                const content = prompt('Enter note content:');
+                if (!content) return;
+
+                try {
+                    const response = await fetch(`${API_URL}/items/${itemId}/notes`, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            content: content,
+                            author: 'User'
+                        })
+                    });
+                    if (response.ok) {
+                        await this.fetchInventory();
+                    }
+                } catch (error) {
+                    console.error('Failed to add note:', error);
+                }
+            }
+
+            async addFile(itemId) {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.onchange = async () => {
+                    if (!input.files.length) return;
+                    
+                    const formData = new FormData();
+                    formData.append('file', input.files[0]);
+
+                    try {
+                        const response = await fetch(`${API_URL}/items/${itemId}/files`, {
+                            method: 'POST',
+                            body: formData
+                        });
+                        if (response.ok) {
+                            await this.fetchInventory();
+                        }
+                    } catch (error) {
+                        console.error('Failed to upload file:', error);
+                    }
+                };
+                input.click();
             }
 
             updateParentSelect() {
@@ -162,10 +441,15 @@
                 e.preventDefault();
                 const formData = {
                     name: document.getElementById('name').value,
-                    description: document.getElementById('description').value,
+                    description: document.getElementById('item_description').value.trim(),
                     qr_code: document.getElementById('qr_code').value,
                     parent_id: document.getElementById('parent_id').value || null
                 };
+
+                // Don't send empty description
+                if (!formData.description) {
+                    delete formData.description;
+                }
 
                 try {
                     const response = await fetch(`${API_URL}/items`, {
@@ -175,6 +459,33 @@
                     });
 
                     if (response.ok) {
+                        const result = await response.json();
+                        const itemId = result.id;
+
+                        // Add note if provided
+                        const noteContent = document.getElementById('initial_note').value;
+                        if (noteContent) {
+                            await fetch(`${API_URL}/items/${itemId}/notes`, {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({
+                                    content: noteContent,
+                                    author: 'User'
+                                })
+                            });
+                        }
+
+                        // Add file if provided
+                        const fileInput = document.getElementById('initial_file');
+                        if (fileInput.files.length > 0) {
+                            const fileFormData = new FormData();
+                            fileFormData.append('file', fileInput.files[0]);
+                            await fetch(`${API_URL}/items/${itemId}/files`, {
+                                method: 'POST',
+                                body: fileFormData
+                            });
+                        }
+
                         await this.fetchInventory();
                         e.target.reset();
                     }
@@ -192,11 +503,35 @@
                     itemDiv.className = 'tree-item';
                     itemDiv.innerHTML = `
                         <div class="item-details">
-                            <strong>${item.name}</strong>
-                            <p>${item.description || 'No description'}</p>
-                            <div class="path">Path: ${item.full_path}</div>
-                            <div class="attachments">
-                                Attachments: ${item.attachment_count}
+                            <div style="display: flex; justify-content: space-between; align-items: start;">
+                                <div>
+                                    <strong>${item.name}</strong>
+                                    <p>${item.description || 'No description'}</p>
+                                    <div class="path">Path: ${item.full_path}</div>
+                                    <div class="attachments">
+                                        Attachments: ${item.attachment_count}
+                                        ${item.notes?.map(note => `
+                                            <div class="note-item">
+                                                <div class="note-content">${note.content}</div>
+                                                <div class="note-metadata">By ${note.author}</div>
+                                            </div>
+                                        `).join('') || ''}
+                                        ${item.files?.map(file => `
+                                            <div class="file-item">
+                                                <a href="${file.file}" target="_blank">${file.file.split('/').pop()}</a>
+                                            </div>
+                                        `).join('') || ''}
+                                    </div>
+                                </div>
+                                <div style="display: flex; gap: 5px;">
+                                    <button onclick="inventoryManager.addNote(${item.id})" style="width: auto; padding: 5px 10px;">📝</button>
+                                    <button onclick="inventoryManager.addFile(${item.id})" style="width: auto; padding: 5px 10px;">📎</button>
+                                    <button onclick="inventoryManager.showMoveModal(${item.id})" style="width: auto; padding: 5px 10px;">📦</button>
+                                    <button onclick="inventoryManager.deleteItem(${item.id})" style="width: auto; padding: 5px 10px;">🗑️</button>
+                                    <button onclick="inventoryManager.openListingForm(${item.id})" style="width: auto; padding: 5px 10px;">
+                                        Sell
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     `;
@@ -219,6 +554,47 @@
                 
                 this.updateParentSelect();
             }
+
+            async openListingForm(itemId) {
+                document.getElementById('listingItemId').value = itemId;
+                document.getElementById('listingModal').classList.add('active');
+            }
+
+            async handleListingSubmit(e) {
+                e.preventDefault();
+                const itemId = document.getElementById('listingItemId').value;
+                const listingData = {
+                    subject: document.getElementById('subject').value,
+                    category: document.getElementById('category').value,
+                    subcategory: document.getElementById('subcategory').value,
+                    brand: document.getElementById('brand').value,
+                    type: document.getElementById('type').value,
+                    usage: document.getElementById('usage').value,
+                    condition: document.getElementById('condition').value,
+                    description: document.getElementById('listing_description').value,
+                    price: document.getElementById('price').value,
+                    location: document.getElementById('location').value
+                };
+
+                try {
+                    const response = await fetch(`${API_URL}/items/${itemId}/listing`, {
+                        method: 'PUT',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({
+                            listing_json: JSON.stringify(listingData)
+                        })
+                    });
+
+                    if (response.ok) {
+                        document.getElementById('listingModal').classList.remove('active');
+                        document.getElementById('listingForm').reset();
+                        await this.fetchInventory();
+                    }
+                } catch (error) {
+                    console.error('Failed to update listing:', error);
+                }
+            }
+
         }
 
         // Initialize the application

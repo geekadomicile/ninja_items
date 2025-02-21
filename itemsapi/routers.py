@@ -102,11 +102,22 @@ def get_item_notes(request, item_id: int):
 
 @router.put("/items/{item_id}/listing", response=ItemOut)
 def update_listing(request, item_id: int, payload: ListingUpdate):
-    """Update item's listing data"""
+    """Update item's listing data and set worker status to pending"""
     item = get_object_or_404(Item, id=item_id)
     item.listing_json = payload.listing_json
+    item.listing_worker = 'pending'  # Set to pending when listing is updated
     item.save()
     return item
+
+@router.get("/listing/job/{worker_name}", response={200: ItemOut, 404: None})
+def get_listing_job(request, worker_name: str):
+    """Get first pending listing job and assign it to worker"""
+    item = Item.objects.filter(listing_worker='pending', listing_json__isnull=False).first()
+    if not item:
+        return 404, None
+    item.listing_worker = worker_name
+    item.save()
+    return 200, item
 
 @router.post("/items/{item_id}/files", response=FileSchema)
 def upload_file(request, item_id: int, file: UploadedFile = File(...)):

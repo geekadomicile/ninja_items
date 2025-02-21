@@ -81,6 +81,7 @@ class ItemOut(ItemBase):
     emails: List[EmailSchema] = []
     full_path: str
     attachment_count: int
+    listing_worker: Optional[str] = None
     
     @staticmethod
     def resolve_children(obj):

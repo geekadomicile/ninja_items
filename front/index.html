@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inventory Manager</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Add Item Panel -->
+        <div class="panel">
+            <h2>Add New Item</h2>
+            <div id="itemFormContainer"></div>
+        </div>
+
+        <!-- Inventory Tree Panel -->
+        <div class="panel">
+            <h2>Inventory Tree</h2>
+            <div id="searchContainer"></div>
+            <div id="treeView"></div>
+        </div>
+    </div>
+
+    <!-- Move Modal -->
+    <div id="moveModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="document.getElementById('moveModal').classList.remove('active')">&times;</span>
+            <h3>Move Item</h3>
+            <input type="hidden" id="moveItemId">
+            <select id="newParentId">
+                <option value="">No Parent</option>
+            </select>
+            <div class="actions">
+                <button onclick="treeView.handleMove()">Confirm</button>
+                <button onclick="document.getElementById('moveModal').classList.remove('active')">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Listing Modal -->
+    <div id="listingModal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Export Item for Listing</h2>
+            <div id="listingFormContainer"></div>
+        </div>
+    </div>
+
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
