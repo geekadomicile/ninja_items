@@ -6,10 +6,10 @@ from django.db.models import Q
 from mptt.exceptions import InvalidMove
 from typing import List, Optional
 from django.core.exceptions import ValidationError
-from .models import ComponentHistory, Item, Note, File as FileModel
+from .models import ComponentHistory, Item, Note, File as FileModel, Email
 from .schemas import (
     ComponentHistorySchema, ItemCreate, ItemOut, MovePayload,
-    NoteCreate, NoteSchema, FileSchema, ListingUpdate
+    NoteCreate, NoteSchema, FileSchema, ListingUpdate, EmailCreate, EmailSchema
 )
 from django.db import transaction
 
@@ -129,3 +129,16 @@ def upload_file(request, item_id: int, file: UploadedFile = File(...)):
         file_type=file.content_type
     )
     return file_obj
+
+@router.post("/items/{item_id}/emails", response=EmailSchema)
+def create_email(request, item_id: int, payload: EmailCreate):
+    """Create an email attachment for an item"""
+    item = get_object_or_404(Item, id=item_id)
+    email = Email.objects.create(
+        item=item,
+        subject=payload.subject,
+        body=payload.body,
+        from_address=payload.from_address,
+        received_at=payload.received_at
+    )
+    return email

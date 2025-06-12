@@ -11,7 +11,7 @@ class AttachmentBase(Schema):
 class CodeIdentifierSchema(AttachmentBase):
     code: str
     source: str
-    
+
 class ComponentHistorySchema(Schema):
     id: int
     old_parent_id: Optional[int]
@@ -32,6 +32,13 @@ class FileSchema(AttachmentBase):
     file_type: str
 
 class EmailSchema(AttachmentBase):
+    subject: str
+    body: str
+    from_address: str
+    received_at: datetime
+
+class EmailCreate(Schema):
+    item_id: int
     subject: str
     body: str
     from_address: str
