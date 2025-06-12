@@ -94,6 +94,7 @@ class Email(models.Model):
     from_address = models.EmailField()
     received_at = models.DateTimeField()
     created_at = models.DateTimeField(auto_now_add=True)
+    qr_code = models.CharField(max_length=255, blank=True, null=True, db_index=True)
 
 class ComponentHistory(models.Model):
     CREATED = 'created'

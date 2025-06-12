@@ -36,6 +36,7 @@ class EmailSchema(AttachmentBase):
     body: str
     from_address: str
     received_at: datetime
+    qr_code: Optional[str] = None
 
 class EmailCreate(Schema):
     item_id: int
@@ -43,6 +44,7 @@ class EmailCreate(Schema):
     body: str
     from_address: str
     received_at: datetime
+    qr_code: Optional[str] = None
     
 # Item schemas with inheritance
 class ListingUpdate(Schema):
